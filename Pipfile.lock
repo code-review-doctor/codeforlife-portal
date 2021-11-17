@@ -140,10 +140,10 @@
         },
         "django-hijack": {
             "hashes": [
-                "sha256:3e84e485e2aee9c60fce6dbf6bacf9882ab31935970c6e50fd77a9a6cadbdaba",
-                "sha256:d34394006f9c344cde0f141509ab6781de4c34e21952c1db4c3efd9aa28d7b0f"
+                "sha256:216de6ff863b5f48314795083e96267ff0829ff7f7180c26ca3c17d8a134e1cf",
+                "sha256:8b820b6fe605cf2f3b50817985d7245285a18c027b7e3eb424d18b7908ecd2e1"
             ],
-            "version": "==3.1.2"
+            "version": "==2.3.0"
         },
         "django-hijack-admin": {
             "hashes": [
