@@ -1,39 +1,3 @@
-# -*- coding: utf-8 -*-
-# Code for Life
-#
-# Copyright (C) 2019, Ocado Innovation Limited
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ADDITIONAL TERMS – Section 7 GNU General Public Licence
-#
-# This licence does not grant any right, title or interest in any “Ocado” logos,
-# trade names or the trademark “Ocado” or any other trademarks or domain names
-# owned by Ocado Innovation Limited or the Ocado group of companies or any other
-# distinctive brand features of “Ocado” as may be secured from time to time. You
-# must not distribute any modification of this program using the trademark
-# “Ocado” or claim any affiliation or association with Ocado or its employees.
-#
-# You are not authorised to use the name Ocado (or any of its trade names) or
-# the names of any author or contributor in advertising or for publicity purposes
-# pertaining to the distribution of this program, without the prior written
-# authorisation of Ocado.
-#
-# Any propagation, distribution or conveyance of this program must include this
-# copyright notice and these terms. You must not misrepresent the origins of this
-# program; modified versions of the program must be marked as such and not
-# identified as the original program.
 from builtins import object
 
 from common.models import School
@@ -48,22 +12,22 @@ class OrganisationForm(forms.ModelForm):
 
         model = School
         fields = ["name", "postcode", "country"]
-        labels = {
-            "name": "Name of your school or club",
-            "postcode": "Postcode",
-            "country": "Country",
-        }
         widgets = {
             "name": forms.TextInput(
                 attrs={
                     "autocomplete": "off",
-                    "placeholder": "Name of your school or club",
-                }
+                    "placeholder": "Name of school or club",
+                },
             ),
             "postcode": forms.TextInput(
-                attrs={"autocomplete": "off", "placeholder": "Postcode"}
+                attrs={"autocomplete": "off", "placeholder": "Postcode / Zipcode"}
             ),
-            "country": CountrySelectWidget(attrs={"class": "wide"}),
+            "country": CountrySelectWidget(layout="{widget}"),
+        }
+        help_texts = {
+            "name": "Name of school or club",
+            "postcode": "Postcode / Zipcode",
+            "country": "Country",
         }
 
     def __init__(self, *args, **kwargs):
@@ -122,14 +86,16 @@ class OrganisationForm(forms.ModelForm):
 
 class OrganisationJoinForm(forms.Form):
     fuzzy_name = forms.CharField(
-        label="Search for school or club by name or postcode",
-        widget=forms.TextInput(attrs={"placeholder": "Enrico Fermi High School"}),
+        widget=forms.TextInput(
+            attrs={"placeholder": "School or club by name or postcode"}
+        ),
+        help_text="Enter school or club by name or postcode",
     )
 
     # Note: the reason this is a CharField rather than a ChoiceField is to avoid having to
     # provide choices which was problematic given that the options are dynamically generated.
     chosen_org = forms.CharField(
-        label="Select school or club", widget=forms.Select(attrs={"class": "wide"})
+        widget=forms.Select(), help_text="Select school or club"
     )
 
     def clean_chosen_org(self):

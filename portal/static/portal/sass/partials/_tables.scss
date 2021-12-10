@@ -1,31 +1,27 @@
-@import 'base';
+@import "base";
 
 table {
   margin: 20px auto 20px auto;
   width: 100%;
 
   button {
-    @include _font-size(16px);
+    @include _font-size(14px);
     @include _padding(2px, 10px, 2px, 10px);
+    min-width: 70px;
   }
-
 }
 
 th {
   @include _padding(5px, 10px, 5px, 10px);
   font-weight: 500;
-
-  p {
-    color: $color-text-secondary;
-  }
-
+  color: $color-text-secondary;
 }
 
 td {
   @include _padding(10px, 10px, 10px, 10px);
 
   p {
-    @include _padding(0px, 20px, 0px, 0px);
+    @include _padding(0px, 0px, 0px, 0px);
     vertical-align: middle;
   }
 }
@@ -37,33 +33,8 @@ td {
 }
 
 .header-primary {
-  th {
+  th:not(.no-bg) {
     background-color: $color-table-header-primary;
-  }
-}
-
-.header-secondary {
-  width: 500px;
-
-  th {
-    background-color: $color-table-header-secondary;
-
-    p {
-      color: $color-text-secondary;
-      text-align: center;
-      vertical-align: top;
-    }
-
-    small {
-      @include _font-size(12px);
-    }
-
-  }
-}
-
-.header-tertiary {
-  th {
-    background-color: $color-background-positive;
   }
 }
 
@@ -73,40 +44,23 @@ td {
   }
 }
 
-.data-secondary {
-  td {
-    background-color: $color-background-tint-secondary;
+.header-secondary {
+  th:not(.no-bg) {
+    background-color: $color-table-header-secondary;
   }
 }
 
-.data-tertiary {
-  td {
-    background-color: $color-background-tint-tertiary;
-  }
-}
-
-.data-quaternary {
-  td {
-    background-color: $color-background-tint-quaternary;
-  }
-}
-
-.data-quinary {
-  td {
-    background-color: $color-background-tint-quinary;
-  }
-}
-
-.secondary-table {
-  td {
-    background-color: $color-background-secondary;
-  }
-
-  th,
-  td {
-    border: 2px solid $color-background-tint-primary;
-  }
-
+.or-circle {
+  @include _font-size(14px);
+  background-color: $color-primary;
+  border-radius: 50%;
+  color: $color-text-secondary;
+  font-weight: 600;
+  line-height: 40px;
+  width: 40px;
+  height: 40px;
+  margin: 4px;
+  text-align: center;
 }
 
 .cell-center {
@@ -118,14 +72,10 @@ td {
 }
 
 .table-footer {
-
-  background-color: $color-background-tint-quinary;
-
   button {
     @include _margin(0px, 19px, 0px, 19px);
     float: left;
   }
-
 }
 
 .status-indicator {
@@ -155,19 +105,16 @@ td {
 }
 
 .student-table {
-
-  a[class^='button'] {
+  a[class^="button"] {
     padding: auto;
   }
 
   input {
     @include _margin(0px, 5px, 0px, 0px);
   }
-
 }
 
 .student-table__header {
-
   * {
     padding: 0;
   }
@@ -177,7 +124,6 @@ td {
     display: flex;
     justify-content: center;
   }
-
 }
 
 .student-table__cell {
@@ -192,7 +138,6 @@ td {
 }
 
 .games-table__header {
-
   * {
     padding: auto;
   }
@@ -202,8 +147,6 @@ td {
   display: flex;
   justify-content: flex-start;
 }
-
-
 
 .games-table__buttons {
   display: flex;
@@ -216,18 +159,15 @@ td {
   }
 }
 
-
 .table--move {
-
   td {
     background-color: $color-background-secondary;
-    border: 2px solid $color-background-tint-quaternary;
+    border: 2px solid $color-background-tint-primary;
   }
 
   input {
     font-style: italic;
   }
-
 }
 
 .resource {
@@ -256,5 +196,4 @@ td {
   .games-table__header {
     @include _font-size(14px);
   }
-
 }

@@ -1,39 +1,3 @@
-# -*- coding: utf-8 -*-
-# Code for Life
-#
-# Copyright (C) 2019, Ocado Innovation Limited
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ADDITIONAL TERMS – Section 7 GNU General Public Licence
-#
-# This licence does not grant any right, title or interest in any “Ocado” logos,
-# trade names or the trademark “Ocado” or any other trademarks or domain names
-# owned by Ocado Innovation Limited or the Ocado group of companies or any other
-# distinctive brand features of “Ocado” as may be secured from time to time. You
-# must not distribute any modification of this program using the trademark
-# “Ocado” or claim any affiliation or association with Ocado or its employees.
-#
-# You are not authorised to use the name Ocado (or any of its trade names) or
-# the names of any author or contributor in advertising or for publicity purposes
-# pertaining to the distribution of this program, without the prior written
-# authorisation of Ocado.
-#
-# Any propagation, distribution or conveyance of this program must include this
-# copyright notice and these terms. You must not misrepresent the origins of this
-# program; modified versions of the program must be marked as such and not
-# identified as the original program.
 from captcha.fields import ReCaptchaField
 from captcha.widgets import ReCaptchaV2Invisible
 from common.models import Student, Teacher
@@ -48,12 +12,28 @@ from django.template import loader
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
-from portal.helpers.password import form_clean_password
+from portal.helpers.password import PasswordStrength, form_clean_password
 
 
-class PasswordResetSetPasswordForm(django_auth_forms.SetPasswordForm):
+class TeacherPasswordResetSetPasswordForm(django_auth_forms.SetPasswordForm):
     def __init__(self, user, *args, **kwargs):
-        super(PasswordResetSetPasswordForm, self).__init__(user, *args, **kwargs)
+        super(TeacherPasswordResetSetPasswordForm, self).__init__(user, *args, **kwargs)
+        self.fields["new_password1"].label = "Enter your new password"
+        self.fields["new_password1"].widget.attrs[
+            "placeholder"
+        ] = "Try at least 10 characters, uppercase, digit and special characters"
+        self.fields["new_password2"].label = "Confirm your new password"
+        self.fields["new_password2"].widget.attrs[
+            "placeholder"
+        ] = "Please repeat your new password"
+
+    def clean_new_password1(self):
+        return form_clean_password(self, "new_password1", PasswordStrength.TEACHER)
+
+
+class StudentPasswordResetSetPasswordForm(django_auth_forms.SetPasswordForm):
+    def __init__(self, user, *args, **kwargs):
+        super(StudentPasswordResetSetPasswordForm, self).__init__(user, *args, **kwargs)
         self.fields["new_password1"].label = "Enter your new password"
         self.fields["new_password1"].widget.attrs[
             "placeholder"
@@ -64,7 +44,7 @@ class PasswordResetSetPasswordForm(django_auth_forms.SetPasswordForm):
         ] = "Please repeat your new password"
 
     def clean_new_password1(self):
-        return form_clean_password(self, forms, "new_password1")
+        return form_clean_password(self, "new_password1", PasswordStrength.INDEPENDENT)
 
 
 class TeacherPasswordResetForm(forms.Form):

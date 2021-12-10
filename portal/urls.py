@@ -1,39 +1,3 @@
-# -*- coding: utf-8 -*-
-# Code for Life
-#
-# Copyright (C) 2021, Ocado Innovation Limited
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ADDITIONAL TERMS – Section 7 GNU General Public Licence
-#
-# This licence does not grant any right, title or interest in any “Ocado” logos,
-# trade names or the trademark “Ocado” or any other trademarks or domain names
-# owned by Ocado Innovation Limited or the Ocado group of companies or any other
-# distinctive brand features of “Ocado” as may be secured from time to time. You
-# must not distribute any modification of this program using the trademark
-# “Ocado” or claim any affiliation or association with Ocado or its employees.
-#
-# You are not authorised to use the name Ocado (or any of its trade names) or
-# the names of any author or contributor in advertising or for publicity purposes
-# pertaining to the distribution of this program, without the prior written
-# authorisation of Ocado.
-#
-# Any propagation, distribution or conveyance of this program must include this
-# copyright notice and these terms. You must not misrepresent the origins of this
-# program; modified versions of the program must be marked as such and not
-# identified as the original program.
 from aimmo.urls import HOMEPAGE_REGEX
 from common.permissions import teacher_verified
 from django.conf import settings
@@ -62,8 +26,9 @@ from portal.helpers.ratelimit import (
     RATELIMIT_METHOD,
     RATELIMIT_RATE,
 )
+from portal.helpers.regexes import ACCESS_CODE_REGEX
 from portal.two_factor_urls import urlpatterns as two_factor_urls
-from portal.views.about import about
+from portal.views.about import about, getinvolved, contribute
 from portal.views.admin import (
     AdminChangePasswordDoneView,
     AdminChangePasswordView,
@@ -79,7 +44,6 @@ from portal.views.api import (
 )
 from portal.views.dotmailer import dotmailer_consent_form, process_newsletter_form
 from portal.views.email import send_new_users_report, verify_email
-from portal.views.help_and_support import contact
 from portal.views.home import (
     home,
     home_learning,
@@ -88,17 +52,18 @@ from portal.views.home import (
 )
 from portal.views.login import old_login_form_redirect
 from portal.views.login.independent_student import IndependentStudentLoginView
-from portal.views.login.student import StudentLoginView
+from portal.views.login.student import (
+    StudentLoginView,
+    StudentClassCodeView,
+    student_direct_login,
+)
 from portal.views.login.teacher import TeacherLoginView
-from portal.views.materials_viewer import MaterialsViewer
 from portal.views.organisation import (
     OrganisationFuzzyLookup,
     organisation_leave,
     organisation_manage,
 )
-from portal.views.play_aimmo import play_aimmo
 from portal.views.play_landing_page import play_landing_page
-from portal.views.play_rapid_router import play_rapid_router
 from portal.views.privacy_policy import privacy_policy
 from portal.views.registration import (
     password_reset_check_and_confirm,
@@ -111,9 +76,12 @@ from portal.views.student.edit_account_details import (
     SchoolStudentEditAccountView,
     student_edit_account,
 )
-from portal.views.student.play import student_details, student_join_organisation
+from portal.views.student.play import (
+    SchoolStudentDashboard,
+    IndependentStudentDashboard,
+    student_join_organisation,
+)
 from portal.views.teach import teach
-from portal.views.teacher import materials_viewer_redirect
 from portal.views.teacher.dashboard import (
     dashboard_manage,
     organisation_allow_join,
@@ -124,9 +92,7 @@ from portal.views.teacher.dashboard import (
     teacher_disable_2FA,
     teacher_reject_student_request,
 )
-from portal.views.teacher.solutions_level_selector import levels
 from portal.views.teacher.teach import (
-    default_solution,
     invite_teacher,
     teacher_class_password_reset,
     teacher_delete_class,
@@ -140,15 +106,15 @@ from portal.views.teacher.teach import (
     teacher_onboarding_create_class,
     teacher_onboarding_edit_class,
     teacher_print_reminder_cards,
-    teacher_student_reset,
+    teacher_download_csv,
     teacher_view_class,
 )
-from portal.views.teacher.teacher_materials import kurono_teaching_packs, materials
 from portal.views.teacher.teacher_resources import (
     teacher_kurono_resources,
     teacher_rapid_router_resources,
+    kurono_teaching_packs,
+    materials,
 )
-from portal.views.terms import terms
 
 js_info_dict = {"packages": ("conf.locale",)}
 
@@ -221,12 +187,6 @@ urlpatterns = [
     url(r"^", include((two_factor_patterns, "two_factor"), namespace="two_factor")),
     url(r"^i18n/", include("django.conf.urls.i18n")),
     url(r"^jsi18n/$", JavaScriptCatalog.as_view(), js_info_dict),
-    url(r"^teach/solutions_navigation/$", levels, name="teacher_level_solutions"),
-    url(
-        r"^teach/solutions_navigation/(?P<levelName>[A-Z0-9]+)/$",
-        default_solution,
-        name="default_solution",
-    ),
     url(r"^(?P<levelName>[A-Z0-9]+)/$", play_default_level, name="play_default_level"),
     url(r"^$", home, name="home"),
     url(r"^home-learning", home_learning, name="home-learning"),
@@ -245,7 +205,21 @@ urlpatterns = [
         )(TeacherLoginView.as_view()),
         name="teacher_login",
     ),
-    url(r"^login/student/$", StudentLoginView.as_view(), name="student_login"),
+    url(
+        rf"^login/student/(?P<access_code>{ACCESS_CODE_REGEX})/(?:(?P<login_type>classform)/)?$",
+        StudentLoginView.as_view(),
+        name="student_login",
+    ),
+    url(
+        r"^login/student/$",
+        StudentClassCodeView.as_view(),
+        name="student_login_access_code",
+    ),
+    url(
+        r"^u/(?P<user_id>[0-9]+)/(?P<login_id>[a-z0-9]+)/$",
+        student_direct_login,
+        name="student_direct_login",
+    ),
     url(
         r"^login/independent/$",
         ratelimit(
@@ -310,23 +284,28 @@ urlpatterns = [
         name="onboarding-classes",
     ),
     url(
-        r"^teach/onboarding-class/(?P<access_code>[A-Z0-9]+)/$",
+        rf"^teach/onboarding-class/(?P<access_code>{ACCESS_CODE_REGEX})$",
         teacher_onboarding_edit_class,
         name="onboarding-class",
     ),
     url(
-        r"^teach/onboarding-class/(?P<access_code>[A-Z0-9]+)/print_reminder_cards/$",
+        rf"^teach/onboarding-class/(?P<access_code>{ACCESS_CODE_REGEX})/print_reminder_cards/$",
         teacher_print_reminder_cards,
         name="teacher_print_reminder_cards",
     ),
     url(
-        r"^teach/onboarding-complete",
-        TemplateView.as_view(template_name="portal/teach/onboarding_complete.html"),
-        name="onboarding-complete",
+        rf"^teach/onboarding-class/(?P<access_code>{ACCESS_CODE_REGEX})/download_csv/$",
+        teacher_download_csv,
+        name="teacher_download_csv",
     ),
     url(r"^teach/invite", invite_teacher, name="invite_teacher"),
     url(r"^play/$", play_landing_page, name="play"),
-    url(r"^play/details/$", student_details, name="student_details"),
+    url(r"^play/details/$", SchoolStudentDashboard.as_view(), name="student_details"),
+    url(
+        r"^play/details/independent$",
+        IndependentStudentDashboard.as_view(),
+        name="independent_student_details",
+    ),
     url(r"^play/account/$", student_edit_account, name="student_edit_account"),
     url(
         r"^play/account/independent/$",
@@ -346,24 +325,15 @@ urlpatterns = [
         name="school_student_edit_account",
     ),
     url(r"^play/join/$", student_join_organisation, name="student_join_organisation"),
-    url(r"^play/rapid-router/$", play_rapid_router, name="play_rapid_router"),
-    url(r"^play/kurono/$", play_aimmo, name="play_aimmo"),
     url(r"^about", about, name="about"),
-    url(r"^help/$", contact, name="help"),
-    url(r"^terms", terms, name="terms"),
+    url(r"^getinvolved", getinvolved, name="getinvolved"),
+    url(r"^contribute", contribute, name="contribute"),
+    url(
+        r"^terms", TemplateView.as_view(template_name="portal/terms.html"), name="terms"
+    ),
     url(r"^privacy-policy/$", privacy_policy, name="privacy_policy"),
     url(r"^teach/materials/$", materials, name="materials"),
     url(r"^teach/kurono_teaching_packs$", kurono_teaching_packs, name="kurono_packs"),
-    url(
-        r"^teach/materials/(?P<pdf_name>[a-zA-Z0-9\/\-_]+)$",
-        materials_viewer_redirect,
-        name="materials_viewer_redirect",
-    ),
-    url(
-        r"^materials/(?P<pdf_name>[a-zA-Z0-9\/\-_]+)$",
-        MaterialsViewer.as_view(),
-        name="materials_viewer",
-    ),
     url(
         r"^teach/resources/$", teacher_rapid_router_resources, name="teaching_resources"
     ),
@@ -414,22 +384,22 @@ urlpatterns = [
         name="teacher_reject_student_request",
     ),
     url(
-        r"^teach/class/(?P<access_code>[A-Z0-9]+)/$",
+        rf"^teach/class/(?P<access_code>{ACCESS_CODE_REGEX})$",
         teacher_view_class,
         name="view_class",
     ),
     url(
-        r"^teach/class/delete/(?P<access_code>[A-Z0-9]+)/$",
+        rf"^teach/class/delete/(?P<access_code>{ACCESS_CODE_REGEX})$",
         teacher_delete_class,
         name="teacher_delete_class",
     ),
     url(
-        r"^teach/class/(?P<access_code>[A-Z0-9]+)/students/delete/$",
+        rf"^teach/class/(?P<access_code>{ACCESS_CODE_REGEX})/students/delete/$",
         teacher_delete_students,
         name="teacher_delete_students",
     ),
     url(
-        r"^teach/class/edit/(?P<access_code>[A-Z0-9]+)/$",
+        rf"^teach/class/edit/(?P<access_code>{ACCESS_CODE_REGEX})$",
         teacher_edit_class,
         name="teacher_edit_class",
     ),
@@ -439,32 +409,27 @@ urlpatterns = [
         name="teacher_edit_student",
     ),
     url(
-        r"^teach/class/student/reset/(?P<pk>[0-9]+)/$",
-        teacher_student_reset,
-        name="teacher_student_reset",
-    ),
-    url(
-        r"^teach/class/(?P<access_code>[A-Z0-9]+)/password_reset/$",
+        rf"^teach/class/(?P<access_code>{ACCESS_CODE_REGEX})/password_reset/$",
         teacher_class_password_reset,
         name="teacher_class_password_reset",
     ),
     url(
-        r"^teach/class/(?P<access_code>[A-Z0-9]+)/students/dismiss/$",
+        rf"^teach/class/(?P<access_code>{ACCESS_CODE_REGEX})/students/dismiss/$",
         teacher_dismiss_students,
         name="teacher_dismiss_students",
     ),
     url(
-        r"^teach/class/move/(?P<access_code>[A-Z0-9]+)/$",
+        rf"^teach/class/move/(?P<access_code>{ACCESS_CODE_REGEX})$",
         teacher_move_class,
         name="teacher_move_class",
     ),
     url(
-        r"^teach/class/(?P<access_code>[A-Z0-9]+)/students/move/$",
+        rf"^teach/class/(?P<access_code>{ACCESS_CODE_REGEX})/students/move/$",
         teacher_move_students,
         name="teacher_move_students",
     ),
     url(
-        r"^teach/class/(?P<access_code>[A-Z0-9]+)/students/move/disambiguate/$",
+        rf"^teach/class/(?P<access_code>{ACCESS_CODE_REGEX})/students/move/disambiguate/$",
         teacher_move_students_to_class,
         name="teacher_move_students_to_class",
     ),
@@ -490,7 +455,6 @@ urlpatterns = [
             ]
         ),
     ),
-    url(r"^hijack/", include("hijack.urls", namespace="hijack")),
     url(r"^cms/", include(wagtailadmin_urls)),
     url(r"^documents/", include(wagtaildocs_urls)),
     url(r"^pages/", include(wagtail_urls)),

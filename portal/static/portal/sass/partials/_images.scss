@@ -1,49 +1,37 @@
-@import 'base';
+@import "base";
 
 img {
   max-height: 100%;
   max-width: 100%;
 }
 
+.img-border {
+  border: 1px solid #4a4a4a;
+}
+
 .homepage-info img {
   @include _padding(0px, 0px, 15px, 0px);
 }
 
-.homepage-info div[class*='col-'] {
+.homepage-info div[class*="col-"] {
   @include _padding(0px, 30px, 0px, 30px);
 }
 
 .background {
-  padding-top: 4rem;
-  padding-bottom: 4rem;
+  padding-top: 3rem;
+  padding-bottom: 3rem;
 }
 
 .background--primary {
   background-color: $color-background-tint-primary;
 }
 
-.background--secondary {
-  background-color: $color-background-tint-secondary;
-}
-
-.background--tertiary {
-  background-color: $color-background-tint-tertiary;
-}
-
-.background--quaternary {
-  background-color: $color-background-tint-quaternary;
-}
-
-.background--quinary {
-  background-color: $color-background-tint-quinary;
-
-  .background--quinary__title {
-    margin: 0;
-  }
+.bg-image {
+  margin-top: 1.5em;
 }
 
 .background--swirl {
-  background-image: url('../img/ocado-swirl.svg');
+  background-image: url("../img/ocado-swirl.svg");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -59,22 +47,22 @@ img {
   }
 
   img {
-    @include _padding(0px, 20px, 0px, 20px);
     vertical-align: bottom;
+  }
+
+  h5 {
+    @include _margin(10px, 0px, 0px, 0px);
   }
 }
 
 .portrait {
-  border-radius: 50%;
   display: block;
   margin: auto;
 }
 
 .logo {
-  content: url('../img/logo_c4l_hexa.png');
-  position: fixed;
-  top: 10px;
-  z-index: $nav-bar-level + 2;
+  @include _padding($spacing * 3, $spacing * 14, $spacing * 3, $spacing * 3);
+  content: url("../img/logo_cfl.png");
 }
 
 .glyphicon {
@@ -88,13 +76,6 @@ img {
 
 .youtube img {
   border: 1px solid $color-background-secondary;
-}
-
-.error-page img {
-  height: 75%;
-  position: absolute;
-  right: 15%;
-  top: 12%;
 }
 
 .grid-benefits__image {
@@ -116,42 +97,77 @@ img {
 }
 
 .educate-homepage {
-  content: url('../img/home_educate_hero_hexagon.png');
-  height: 350px;
-}
-
-.play-homepage {
-  content: url('../img/home_play_hero_hexagon_games.png');
-  height: 350px;
-  width: 100%;
+  content: url("../img/home_educate.png");
+  width: 70%;
   object-fit: contain;
 }
 
-@media (min-width: $tablet-small-min-width) and (max-width: $desktop-large-max-width) {
-  .logo {
-    margin-left: 1%;
-  }
+.play-homepage {
+  content: url("../img/home_play.png");
+  width: 70%;
+  object-fit: contain;
+}
+
+.oval-blue {
+  content: url("../img/oval_blue.svg");
+}
+
+.oval-pink {
+  content: url("../img/oval_pink.svg");
+}
+
+.oval-yellow {
+  content: url("../img/oval_yellow.svg");
+}
+
+.polygon-blue {
+  content: url("../img/polygon_blue.svg");
+}
+
+.polygon-pink {
+  content: url("../img/polygon_pink.svg");
+}
+
+.polygon-yellow {
+  content: url("../img/polygon_yellow.svg");
+}
+
+.login-shape-left {
+  position: relative;
+  left: -17vw;
+  @include _top(250px);
+  @include _margin(-250px, 0px, 0px, 0px);
+}
+
+.login-shape-right {
+  position: relative;
+  left: 17vw;
+  @include _top(500px);
+  @include _margin(-500px, 0px, 0px, 0px);
 }
 
 @media (max-width: $tablet-large-max-width) {
-  .logo {
-    height: 60px;
+  .login-shape-left {
+    position: relative;
+    left: -30vw;
+    width: 150px;
+    @include _top(300px);
+    @include _margin(-300px, 0px, 0px, 0px);
   }
-}
 
-@media (min-width: $tablet-small-min-width) {
-  .logo {
-    content: url('../img/logo_c4l_hexa.png');
-    position: fixed;
-    top: 10px;
-    z-index: $nav-bar-level + 2;
+  .login-shape-right {
+    position: relative;
+    left: 30vw;
+    width: 130px;
+    @include _top(550px);
+    @include _margin(-550px, 0px, 0px, 0px);
   }
 }
 
 @media (max-width: $mobile-max-width) {
-  .logo {
-    position: relative;
-    height: $cfl-logo-height-xs;
+  .login-shape-left,
+  .login-shape-right {
+    display: none;
   }
 
   .image-row {

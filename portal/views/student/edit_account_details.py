@@ -1,40 +1,3 @@
-# -*- coding: utf-8 -*-
-# Code for Life
-#
-# Copyright (C) 2021, Ocado Innovation Limited
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ADDITIONAL TERMS – Section 7 GNU General Public Licence
-#
-# This licence does not grant any right, title or interest in any “Ocado” logos,
-# trade names or the trademark “Ocado” or any other trademarks or domain names
-# owned by Ocado Innovation Limited or the Ocado group of companies or any other
-# distinctive brand features of “Ocado” as may be secured from time to time. You
-# must not distribute any modification of this program using the trademark
-# “Ocado” or claim any affiliation or association with Ocado or its employees.
-#
-# You are not authorised to use the name Ocado (or any of its trade names) or
-# the names of any author or contributor in advertising or for publicity purposes
-# pertaining to the distribution of this program, without the prior written
-# authorisation of Ocado.
-#
-# Any propagation, distribution or conveyance of this program must include this
-# copyright notice and these terms. You must not misrepresent the origins of this
-# program; modified versions of the program must be marked as such and not
-# identified as the original program.
-
 from common.helpers.emails import update_email
 from common.models import Student
 from common.permissions import logged_in_as_student
@@ -86,7 +49,7 @@ class SchoolStudentEditAccountView(LoginRequiredMixin, FormView):
     school student to change their password.
     """
 
-    login_url = reverse_lazy("student_login")
+    login_url = reverse_lazy("student_login_access_code")
     form_class = StudentEditAccountForm
     template_name = "../templates/portal/play/student_edit_account.html"
     success_url = reverse_lazy("student_details")
@@ -115,7 +78,7 @@ class SchoolStudentEditAccountView(LoginRequiredMixin, FormView):
                 request,
                 "Please login using your new password.",
             )
-            return HttpResponseRedirect(reverse_lazy("student_login"))
+            return HttpResponseRedirect(reverse_lazy("student_login_access_code"))
 
     def get_form(self, form_class=None):
         return _get_form(self, form_class)
@@ -151,7 +114,7 @@ class IndependentStudentEditAccountView(LoginRequiredMixin, FormView):
         elif self.changing_password:
             return reverse_lazy("independent_student_login")
         else:
-            return reverse_lazy("student_details")
+            return reverse_lazy("independent_student_details")
 
     def form_valid(self, form):
         return _process_form(

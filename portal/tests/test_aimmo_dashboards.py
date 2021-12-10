@@ -1,5 +1,6 @@
 import pytest
-from aimmo.models import Game, Worksheet
+from aimmo.models import Game
+from aimmo.worksheets import WORKSHEETS
 from common.models import Class
 from common.tests.utils.classes import create_class_directly
 from common.tests.utils.organisation import (
@@ -12,7 +13,6 @@ from django.urls.base import reverse
 
 from .base_test import BaseTest
 from .conftest import IndependentStudent, SchoolStudent
-from .utils.worksheets import create_worksheet_directly
 
 
 @pytest.mark.django_db
@@ -25,12 +25,10 @@ def test_student_cannot_access_teacher_dashboard(
     Then you cannot access it and are instead redirected.
     """
     c = Client()
-    url = reverse("student_login")
+    url = reverse("student_login", kwargs={"access_code": class1.access_code})
     data = {
         "username": student1.username,
         "password": student1.password,
-        "access_code": class1.access_code,
-        "g-recaptcha-response": "something",
     }
 
     c.post(url, data)
@@ -62,7 +60,6 @@ def test_indep_student_cannot_access_dashboard(
     data = {
         "username": independent_student1.username,
         "password": independent_student1.password,
-        "g-recaptcha-response": "something",
     }
 
     c.post(url, data)
@@ -93,12 +90,12 @@ def test_student_aimmo_dashboard_loads(
     or the card list elements.
     """
     c = Client()
-    student_login_url = reverse("student_login")
+    student_login_url = reverse(
+        "student_login", kwargs={"access_code": class1.access_code}
+    )
     data = {
         "username": student1.username,
         "password": student1.password,
-        "access_code": class1.access_code,
-        "g-recaptcha-response": "something",
     }
 
     c.post(student_login_url, data)
@@ -127,8 +124,8 @@ class TestAimmoDashboards(BaseTest):
         klass, class_name, access_code = create_class_directly(teacher_email)
         student_name, student_password, _ = create_school_student_directly(access_code)
 
-        worksheet1 = create_worksheet_directly(1)
-        worksheet2 = create_worksheet_directly(2)
+        worksheet1 = WORKSHEETS.get(1)
+        worksheet2 = WORKSHEETS.get(2)
 
         self.selenium.get(self.live_server_url)
         page = (
@@ -151,7 +148,6 @@ class TestAimmoDashboards(BaseTest):
     def test_delete_games(self):
         teacher_email, teacher_password = signup_teacher_directly()
         create_organisation_directly(teacher_email)
-        create_worksheet_directly(1)
 
         klass1, _, _ = create_class_directly(teacher_email)
         game1 = Game(game_class=klass1)
@@ -169,8 +165,6 @@ class TestAimmoDashboards(BaseTest):
             .go_to_teacher_login_page()
             .login(teacher_email, teacher_password)
         )
-        page = page.go_to_kurono_teacher_dashboard_page().delete_games(
-            [game1.id, game2.id]
-        )
+        page.go_to_kurono_teacher_dashboard_page().delete_games([game1.id, game2.id])
 
         assert Game.objects.count() == 0

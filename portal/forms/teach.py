@@ -1,88 +1,36 @@
-# -*- coding: utf-8 -*-
-# Code for Life
-#
-# Copyright (C) 2021, Ocado Innovation Limited
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ADDITIONAL TERMS – Section 7 GNU General Public Licence
-#
-# This licence does not grant any right, title or interest in any “Ocado” logos,
-# trade names or the trademark “Ocado” or any other trademarks or domain names
-# owned by Ocado Innovation Limited or the Ocado group of companies or any other
-# distinctive brand features of “Ocado” as may be secured from time to time. You
-# must not distribute any modification of this program using the trademark
-# “Ocado” or claim any affiliation or association with Ocado or its employees.
-#
-# You are not authorised to use the name Ocado (or any of its trade names) or
-# the names of any author or contributor in advertising or for publicity purposes
-# pertaining to the distribution of this program, without the prior written
-# authorisation of Ocado.
-#
-# Any propagation, distribution or conveyance of this program must include this
-# copyright notice and these terms. You must not misrepresent the origins of this
-# program; modified versions of the program must be marked as such and not
-# identified as the original program.
 import re
 from builtins import map, range, str
 
 from captcha.fields import ReCaptchaField
 from captcha.widgets import ReCaptchaV2Invisible
 from common.helpers.emails import send_verification_email
-from common.models import Student, stripStudentName
+from common.models import Student, stripStudentName, UserSession, Teacher
 from django import forms
 from django.contrib.auth import authenticate
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 
 from portal.forms.error_messages import INVALID_LOGIN_MESSAGE
-from portal.helpers.password import form_clean_password
+from portal.helpers.password import PasswordStrength, form_clean_password
 from portal.helpers.ratelimit import clear_ratelimit_cache_for_user
 from portal.templatetags.app_tags import is_verified
-
-choices = [
-    ("Miss", "Miss"),
-    ("Mrs", "Mrs"),
-    ("Ms", "Ms"),
-    ("Mr", "Mr"),
-    ("Dr", "Dr"),
-    ("Rev", "Rev"),
-    ("Sir", "Sir"),
-    ("Dame", "Dame"),
-]
 
 
 class TeacherSignupForm(forms.Form):
 
-    teacher_title = forms.ChoiceField(
-        label="Title", choices=choices, widget=forms.Select(attrs={"class": "wide"})
-    )
     teacher_first_name = forms.CharField(
         label="First name",
         max_length=100,
-        widget=forms.TextInput(attrs={"autocomplete": "off", "placeholder": "Grace"}),
+        widget=forms.TextInput(attrs={"autocomplete": "off"}),
     )
     teacher_last_name = forms.CharField(
         label="Last name",
         max_length=100,
-        widget=forms.TextInput(attrs={"autocomplete": "off", "placeholder": "Hopper"}),
+        widget=forms.TextInput(attrs={"autocomplete": "off"}),
     )
     teacher_email = forms.EmailField(
         label="Email address",
-        widget=forms.EmailInput(
-            attrs={"autocomplete": "off", "placeholder": "grace.hopper@navy.mil"}
-        ),
+        widget=forms.EmailInput(attrs={"autocomplete": "off"}),
     )
 
     newsletter_ticked = forms.BooleanField(
@@ -100,7 +48,7 @@ class TeacherSignupForm(forms.Form):
     captcha = ReCaptchaField(widget=ReCaptchaV2Invisible)
 
     def clean_teacher_password(self):
-        return form_clean_password(self, forms, "teacher_password")
+        return form_clean_password(self, "teacher_password", PasswordStrength.TEACHER)
 
     def clean(self):
         if any(self.errors):
@@ -116,34 +64,36 @@ class TeacherSignupForm(forms.Form):
 
 class TeacherEditAccountForm(forms.Form):
 
-    title = forms.ChoiceField(
-        label="Title",
-        choices=choices,
-        widget=forms.Select(attrs={"placeholder": "Title", "class": "wide"}),
-    )
     first_name = forms.CharField(
-        label="First name",
         max_length=100,
         widget=forms.TextInput(attrs={"placeholder": "First name", "class": "fName"}),
+        help_text="First name",
     )
     last_name = forms.CharField(
-        label="Last name",
         max_length=100,
         widget=forms.TextInput(attrs={"placeholder": "Last name", "class": "lName"}),
+        help_text="Last name",
     )
     email = forms.EmailField(
-        label="Change email address (optional)",
         required=False,
-        widget=forms.EmailInput(attrs={"placeholder": "new.email@address.com"}),
+        widget=forms.EmailInput(attrs={"placeholder": "New email address (optional)"}),
+        help_text="New email address (optional)",
     )
     password = forms.CharField(
-        label="New password (optional)", required=False, widget=forms.PasswordInput
+        required=False,
+        widget=forms.PasswordInput(attrs={"placeholder": "New password (optional)"}),
+        help_text="New password (optional)",
     )
     confirm_password = forms.CharField(
-        label="Confirm new password", required=False, widget=forms.PasswordInput
+        required=False,
+        widget=forms.PasswordInput(
+            attrs={"placeholder": "Confirm new password (optional)"}
+        ),
+        help_text="Confirm new password (optional)",
     )
     current_password = forms.CharField(
-        label="Current password", widget=forms.PasswordInput
+        widget=forms.PasswordInput(attrs={"placeholder": "Current password"}),
+        help_text="Enter your current password",
     )
 
     def __init__(self, user, *args, **kwargs):
@@ -151,7 +101,7 @@ class TeacherEditAccountForm(forms.Form):
         super(TeacherEditAccountForm, self).__init__(*args, **kwargs)
 
     def clean_password(self):
-        return form_clean_password(self, forms, "password")
+        return form_clean_password(self, "password", PasswordStrength.TEACHER)
 
     def clean(self):
         if any(self.errors):
@@ -183,15 +133,9 @@ class TeacherLoginForm(AuthenticationForm):
         label="Password", widget=forms.PasswordInput(attrs={"autocomplete": "off"})
     )
 
-    captcha = ReCaptchaField(widget=ReCaptchaV2Invisible)
-
     def clean(self):
         email = self.cleaned_data.get("username", None)
         password = self.cleaned_data.get("password", None)
-        captcha = self.cleaned_data.get("captcha", None)
-
-        if captcha is None:
-            raise forms.ValidationError("Invalid ReCAPTCHA response")
 
         if email and password:
 
@@ -208,6 +152,11 @@ class TeacherLoginForm(AuthenticationForm):
 
             # Reset ratelimit cache upon successful login
             clear_ratelimit_cache_for_user(user.username)
+
+            # Log the login time and school
+            teacher = Teacher.objects.get(new_user=user)
+            session = UserSession(user=user, school=teacher.school)
+            session.save()
 
         return self.cleaned_data
 
@@ -242,14 +191,15 @@ class TeacherLoginForm(AuthenticationForm):
 
 
 class ClassCreationForm(forms.Form):
-    classmate_choices = [("True", "Yes"), ("False", "No")]
     class_name = forms.CharField(
-        label="Class Name", widget=forms.TextInput(attrs={"placeholder": "Lower KS2"})
+        widget=forms.TextInput(attrs={"placeholder": "Class name"}),
+        help_text="Enter a class name",
     )
-    classmate_progress = forms.ChoiceField(
-        label="Allow students to see their classmates' progress?",
-        choices=classmate_choices,
-        widget=forms.Select(attrs={"class": "wide"}),
+    classmate_progress = forms.BooleanField(
+        label="Allow students to see their classmates' progress",
+        widget=forms.CheckboxInput(),
+        initial=False,
+        required=False,
     )
 
 
@@ -370,11 +320,18 @@ class TeacherSetStudentPass(forms.Form):
     )
 
     def clean_password(self):
-        return form_clean_password(self, forms, "password")
+        return form_clean_password(self, "password", PasswordStrength.STUDENT)
 
     def clean(self):
         password = self.cleaned_data.get("password", None)
         confirm_password = self.cleaned_data.get("confirm_password", None)
+
+        # Student password is case insensitive
+        if password is not None:
+            password = password.lower()
+
+        if confirm_password is not None:
+            confirm_password = confirm_password.lower()
 
         check_passwords(password, confirm_password)
 
@@ -589,7 +546,8 @@ class StudentCreationForm(forms.Form):
         label="names",
         widget=forms.Textarea(
             attrs={
-                "placeholder": "You may type students names or copy and paste them from a spreadsheet into this text box."
+                "placeholder": "You can import names from a .CSV file, or copy and paste them from a spreadsheet directly into this text box",
+                "class": "m-0",
             }
         ),
     )

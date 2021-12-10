@@ -1,7 +1,8 @@
 from typing import Any, Dict, List, Optional
 
-from aimmo.models import Game, Worksheet
-from common.models import Class
+from aimmo.game_creator import create_game
+from aimmo.models import Game
+from aimmo.worksheets import WORKSHEETS, Worksheet, get_worksheets_excluding_id
 from common.permissions import logged_in_as_student, logged_in_as_teacher
 from common.utils import LoginRequiredNoErrorMixin
 from django.contrib import messages
@@ -12,9 +13,8 @@ from django.urls import reverse_lazy
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import CreateView
 
-from portal.strings.student_aimmo_dashboard import AIMMO_DASHBOARD_BANNER
-from portal.game_creator import create_game
 from portal.forms.add_game import AddGameForm
+from portal.strings.student_aimmo_dashboard import AIMMO_DASHBOARD_BANNER
 
 
 class TeacherAimmoDashboard(LoginRequiredNoErrorMixin, UserPassesTestMixin, CreateView):
@@ -52,7 +52,7 @@ class StudentAimmoDashboard(
 ):
     template_name = "portal/play/student_aimmo_dashboard.html"
 
-    login_url = reverse_lazy("student_login")
+    login_url = reverse_lazy("student_login_access_code")
 
     def test_func(self) -> Optional[bool]:
         return logged_in_as_student(self.request.user)
@@ -67,8 +67,8 @@ class StudentAimmoDashboard(
         try:
             aimmo_game = Game.objects.get(game_class=klass)
 
-            active_worksheet = aimmo_game.worksheet
-            inactive_worksheets = Worksheet.objects.exclude(id=active_worksheet.id)
+            active_worksheet = WORKSHEETS.get(aimmo_game.worksheet_id)
+            inactive_worksheets = get_worksheets_excluding_id(active_worksheet.id)
 
             return {
                 "BANNER": AIMMO_DASHBOARD_BANNER,
@@ -88,8 +88,7 @@ class StudentAimmoDashboard(
             "description": active_worksheet.description,
             "button1": {
                 "text": "Read challenge",
-                "url": "materials_viewer",
-                "url_args": active_worksheet.student_pdf_name,
+                "url": active_worksheet.student_challenge_url,
             },
             "button2": {
                 "text": "Start challenge",

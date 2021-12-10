@@ -1,45 +1,9 @@
-# -*- coding: utf-8 -*-
-# Code for Life
-#
-# Copyright (C) 2021, Ocado Innovation Limited
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ADDITIONAL TERMS – Section 7 GNU General Public Licence
-#
-# This licence does not grant any right, title or interest in any “Ocado” logos,
-# trade names or the trademark “Ocado” or any other trademarks or domain names
-# owned by Ocado Innovation Limited or the Ocado group of companies or any other
-# distinctive brand features of “Ocado” as may be secured from time to time. You
-# must not distribute any modification of this program using the trademark
-# “Ocado” or claim any affiliation or association with Ocado or its employees.
-#
-# You are not authorised to use the name Ocado (or any of its trade names) or
-# the names of any author or contributor in advertising or for publicity purposes
-# pertaining to the distribution of this program, without the prior written
-# authorisation of Ocado.
-#
-# Any propagation, distribution or conveyance of this program must include this
-# copyright notice and these terms. You must not misrepresent the origins of this
-# program; modified versions of the program must be marked as such and not
-# identified as the original program.
-from aimmo.models import Worksheet
 from aimmo.templatetags.players_utils import get_user_playable_games
+from aimmo.worksheets import get_complete_worksheets, get_incomplete_worksheets
+from common import app_settings as common_app_settings
 from common.models import EmailVerification
 from common.permissions import logged_in_as_teacher
 from common.utils import using_two_factor
-from common import app_settings as common_app_settings
 from django import template
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -47,7 +11,6 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import reverse
 from django.template.context import RequestContext
 from django.template.defaultfilters import stringfilter
-
 from portal import __version__, beta
 
 register = template.Library()
@@ -104,11 +67,8 @@ def has_beta_access(request):
 def games_table(context, base_url):
     playable_games = get_user_playable_games(context, base_url)
 
-    complete_worksheets = Worksheet.objects.exclude(thumbnail_text="Coming Soon")
-    incomplete_worksheets = Worksheet.objects.filter(thumbnail_text="Coming Soon")
-
-    playable_games["complete_worksheets"] = complete_worksheets
-    playable_games["incomplete_worksheets"] = incomplete_worksheets
+    playable_games["complete_worksheets"] = get_complete_worksheets()
+    playable_games["incomplete_worksheets"] = get_incomplete_worksheets()
 
     return playable_games
 
@@ -120,7 +80,7 @@ def make_into_username(u):
         if hasattr(u.userprofile, "student"):
             username = u.first_name
         elif hasattr(u.userprofile, "teacher"):
-            username = u.userprofile.teacher.title + " " + u.last_name
+            username = u.first_name + " " + u.last_name
 
     return username
 

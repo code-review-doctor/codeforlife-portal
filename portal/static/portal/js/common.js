@@ -1,87 +1,141 @@
-/*
-Code for Life
-
-Copyright (C) 2019, Ocado Innovation Limited
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-ADDITIONAL TERMS – Section 7 GNU General Public Licence
-
-This licence does not grant any right, title or interest in any “Ocado” logos,
-trade names or the trademark “Ocado” or any other trademarks or domain names
-owned by Ocado Innovation Limited or the Ocado group of companies or any other
-distinctive brand features of “Ocado” as may be secured from time to time. You
-must not distribute any modification of this program using the trademark
-“Ocado” or claim any affiliation or association with Ocado or its employees.
-
-You are not authorised to use the name Ocado (or any of its trade names) or
-the names of any author or contributor in advertising or for publicity purposes
-pertaining to the distribution of this program, without the prior written
-authorisation of Ocado.
-
-Any propagation, distribution or conveyance of this program must include this
-copyright notice and these terms. You must not misrepresent the origins of this
-program; modified versions of the program must be marked as such and not
-identified as the original program.
-*/
-
 function post(path, params) {
+  let form = document.createElement("form");
+  form.setAttribute("method", "POST");
+  form.setAttribute("action", path);
 
-    var form = document.createElement("form");
-    form.setAttribute("method", 'POST');
-    form.setAttribute("action", path);
+  for (let key in params) {
+    if (params.hasOwnProperty(key)) {
+      let hiddenField = document.createElement("input");
+      hiddenField.setAttribute("type", "hidden");
+      hiddenField.setAttribute("name", key);
+      hiddenField.setAttribute("value", params[key]);
 
-    for (var key in params) {
-        if (params.hasOwnProperty(key)) {
-            var hiddenField = document.createElement("input");
-            hiddenField.setAttribute("type", "hidden");
-            hiddenField.setAttribute("name", key);
-            hiddenField.setAttribute("value", params[key]);
-
-            form.appendChild(hiddenField);
-        }
+      form.appendChild(hiddenField);
     }
+  }
 
-    document.body.appendChild(form);
-    form.submit();
+  document.body.appendChild(form);
+  form.submit();
 }
 
+/**
+ * Show a confirmation popup with Cancel and Confirm buttons.
+ * @param {String} title The title of the popup.
+ * @param {String} text The message of the popup.
+ * @param {String} confirm_handler The Confirm button onclick attribute.
+ */
 function showPopupConfirmation(title, text, confirm_handler) {
-    var popup = $(".popup-wrapper");
-    $(".popup-box__title").text(title);
-    $(".popup-box__msg").append(text);
-    $(".button--confirm").attr("onclick", confirm_handler);
+  let popup = $("#popup");
+  popup.find(".popup-box__title").text(title);
+  popup.find(".popup-box__msg").append(text);
+  popup.find("#confirm_button").attr("onclick", confirm_handler);
 
-    popup.addClass("popup--fade");
+  popup.addClass("popup--fade");
 }
 
 function hidePopupConfirmation() {
-    $(".popup-wrapper").removeClass("popup--fade");
-    $(".popup-text").remove();
+  $("#popup").removeClass("popup--fade");
+  $("#popup").find(".popup-text").remove();
+}
+
+/**
+ * Show an info popup with a close button in the top-right corner.
+ * @param {String} title The title of the popup.
+ * @param {String} text The message of the popup.
+ */
+function showInfoPopup(title, text) {
+  let popup = $("#info-popup");
+  popup.find(".popup-box__title > h5").text(title);
+  popup.find(".popup-box__msg").append(text);
+
+  popup.addClass("popup--fade");
+}
+
+function hideInfoPopup() {
+  $("#info-popup").removeClass("popup--fade");
 }
 
 function postWithCsrf(path) {
-    post(path, {
-        csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val()
-    });
+  post(path, {
+    csrfmiddlewaretoken: $("input[name=csrfmiddlewaretoken]").val(),
+  });
 }
 
 function disableOnClick(id) {
-    return function () {
-        var button = $(id);
-        button.addClass('button--primary--disabled')
-        button.attr('disabled', true);
-        return true;
-    }
+  return function () {
+    let button = $(id);
+    button.addClass("button--primary--disabled");
+    button.attr("disabled", true);
+    return true;
+  };
+}
+
+function copyToClipboardFromElement(tooltipElement, elementSelector) {
+  let value = document.querySelector(elementSelector).textContent;
+  navigator.clipboard.writeText(value);
+
+  // Show the tooltip
+  $(tooltipElement).tooltip("show");
+
+  // Clear the previous timeout
+  clearTimeout($(tooltipElement).data("timeout"));
+
+  // Set a timeout to hide the tooltip after 2 seconds
+  let timeout = setTimeout(() => {
+    $(tooltipElement).tooltip("hide");
+    $(tooltipElement).removeData("timeout");
+  }, 2000);
+  $(tooltipElement).data("timeout", timeout);
+}
+
+// Enable copy-to-clipboard tooltips
+$(document).ready(function () {
+  $('[data-toggle="copyToClipboardTooltip"]').tooltip({
+    title: "Copied to clipboard!",
+    trigger: "manual",
+    placement: "auto top",
+  });
+});
+
+/**
+ * OnChange function that parses the selected students CSV file and populate a target with the contents.
+ * @param {String} targetSelector The ID of the element where the CSV contents will be prepended.
+ */
+function studentsCsvChange(targetSelector) {
+  return function () {
+    $(this).parse({
+      config: {
+        header: true,
+        // make the header case insensitive
+        transformHeader: function (header) {
+          return header.toLowerCase();
+        },
+        complete: function (results) {
+          if (!results.meta.fields.includes("name")) {
+            return alert("'Name' column not found in CSV file.");
+          }
+          const newStudents = results.data.map((row) => row["name"]).join("\n");
+          const currentStudents = $(targetSelector).val();
+          $(targetSelector).val(`${newStudents}\n${currentStudents}`);
+        },
+        skipEmptyLines: true,
+      },
+    });
+  };
+}
+
+/**
+ * Import students' names from a 'Name' column in a CSV file and prepend them to an element.
+ * @param {String} triggerSelector The selector of the element triggering the file input on click
+ * @param {String} targetSelector The ID of the element where the CSV contents will be prepended
+ */
+function importStudentsFromCsv(triggerSelector, targetSelector) {
+  $(triggerSelector).on("click", function () {
+    const fileInput = $("<input>").attr({
+      type: "file",
+      accept: "text/csv",
+    });
+    fileInput.on("change", studentsCsvChange(targetSelector));
+    fileInput.trigger("click");
+  });
 }

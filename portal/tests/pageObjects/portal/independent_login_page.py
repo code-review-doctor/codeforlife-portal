@@ -1,11 +1,8 @@
+import time
+
 from .base_page import BasePage
 from .play import dashboard_page
 from .student_password_reset_form_page import StudentPasswordResetFormPage
-from .teach import dashboard_page as teach_dashboard_page
-from .teach import onboarding_classes_page
-from .teach import onboarding_students_page
-from .teacher_password_reset_form_page import TeacherPasswordResetFormPage
-import time
 
 
 class IndependentStudentLoginPage(BasePage):
@@ -33,7 +30,6 @@ class IndependentStudentLoginPage(BasePage):
         return StudentPasswordResetFormPage(self.browser)
 
     def has_login_failed(self, form_id, error):
-        time.sleep(1.5)
         errors = (
             self.browser.find_element_by_id(form_id)
             .find_element_by_class_name("errorlist")

@@ -1,44 +1,8 @@
-# -*- coding: utf-8 -*-
-# Code for Life
-#
-# Copyright (C) 2021, Ocado Innovation Limited
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ADDITIONAL TERMS – Section 7 GNU General Public Licence
-#
-# This licence does not grant any right, title or interest in any “Ocado” logos,
-# trade names or the trademark “Ocado” or any other trademarks or domain names
-# owned by Ocado Innovation Limited or the Ocado group of companies or any other
-# distinctive brand features of “Ocado” as may be secured from time to time. You
-# must not distribute any modification of this program using the trademark
-# “Ocado” or claim any affiliation or association with Ocado or its employees.
-#
-# You are not authorised to use the name Ocado (or any of its trade names) or
-# the names of any author or contributor in advertising or for publicity purposes
-# pertaining to the distribution of this program, without the prior written
-# authorisation of Ocado.
-#
-# Any propagation, distribution or conveyance of this program must include this
-# copyright notice and these terms. You must not misrepresent the origins of this
-# program; modified versions of the program must be marked as such and not
-# identified as the original program.
 from __future__ import absolute_import
 
 import time
 
-from aimmo.models import Game, Worksheet
+from aimmo.models import Game
 from common.models import Class, Student, Teacher
 from common.tests.utils import email as email_utils
 from common.tests.utils.classes import create_class_directly
@@ -87,9 +51,6 @@ class TestTeachers(TestCase):
 
         c = Client()
         c.login(username=email, password=password)
-        worksheet: Worksheet = Worksheet.objects.create(
-            name="test", starter_code="test"
-        )
         c.post(
             reverse("teacher_aimmo_dashboard"),
             {"game_class": klass.id},
@@ -131,9 +92,6 @@ class TestTeachers(TestCase):
         c.logout()
 
         c.login(username=email, password=password)
-        worksheet: Worksheet = Worksheet.objects.create(
-            name="test", starter_code="test"
-        )
         c.post(
             reverse("teacher_aimmo_dashboard"),
             {"game_class": klass.pk},
@@ -155,9 +113,6 @@ class TestTeachers(TestCase):
             - Students in each class still only have access to their class games
             - Teacher 2 has access to both games and teacher 1 has access to none
         """
-        worksheet: Worksheet = Worksheet.objects.create(
-            name="test", starter_code="test"
-        )
 
         # Create teacher 1 -> class 1 -> student 1
         email1, password1 = signup_teacher_directly()
@@ -246,9 +201,6 @@ class TestTeachers(TestCase):
         When a teacher transfers them to another class with a new teacher,
         Then the student should only have access to the new teacher's games
         """
-        worksheet: Worksheet = Worksheet.objects.create(
-            name="test", starter_code="test"
-        )
 
         email1, password1 = signup_teacher_directly()
         school_name, postcode = create_organisation_directly(email1)
@@ -320,9 +272,6 @@ class TestTeachers(TestCase):
         create the exact same game again,
         Then the class should only have one game, and an error message should appear.
         """
-        worksheet: Worksheet = Worksheet.objects.create(
-            name="test", starter_code="test"
-        )
 
         email, password = signup_teacher_directly()
         _, _ = create_organisation_directly(email)
@@ -379,7 +328,7 @@ class TestTeacher(BaseTest):
         page = HomePage(self.selenium)
         page = submit_teacher_signup_form(page, password="test")
         assert page.has_teacher_signup_failed(
-            "Password not strong enough, consider using at least 8 characters, upper and lower case letters, and numbers"
+            "Password not strong enough, consider using at least 10 characters, upper and lower case letters, numbers, special characters and making it hard to guess."
         )
 
     def test_signup_failure_common_password(self):
@@ -387,7 +336,7 @@ class TestTeacher(BaseTest):
         page = HomePage(self.selenium)
         page = submit_teacher_signup_form(page, password="Password1")
         assert page.has_teacher_signup_failed(
-            "Password not strong enough, consider using at least 8 characters, upper and lower case letters, and numbers"
+            "Password not strong enough, consider using at least 10 characters, upper and lower case letters, numbers, special characters and making it hard to guess."
         )
 
     def test_login_failure(self):
@@ -449,17 +398,13 @@ class TestTeacher(BaseTest):
 
         assert self.is_dashboard_page(page)
 
-        page = page.go_to_rapid_router_resources_page().go_to_materials_page()
+        page = page.go_to_rapid_router_resources_page()
 
-        assert self.is_materials_page(page)
+        assert self.is_resources_page(page)
 
-        page = page.click_pdf_link()
+        page = page.go_to_kurono_resources_page()
 
-        assert self.is_pdf_viewer_page(page)
-
-        page = page.go_to_kurono_resources_page().go_to_kurono_packs_page()
-
-        assert self.is_kurono_packs_page(page)
+        assert self.is_resources_page(page)
 
     def test_edit_details(self):
         email, password = signup_teacher_directly()
@@ -468,21 +413,25 @@ class TestTeacher(BaseTest):
         create_school_student_directly(access_code)
 
         self.selenium.get(self.live_server_url)
-        page = HomePage(self.selenium).go_to_teacher_login_page().login(email, password)
+        page = (
+            HomePage(self.selenium)
+            .go_to_teacher_login_page()
+            .login(email, password)
+            .open_account_tab()
+        )
 
         page = page.change_teacher_details(
             {
-                "title": "Mrs",
                 "first_name": "Paulina",
                 "last_name": "Koch",
-                "current_password": "Password2",
+                "current_password": "Password2!",
             }
         )
         assert self.is_dashboard_page(page)
         assert is_teacher_details_updated_message_showing(self.selenium)
 
         assert page.check_account_details(
-            {"title": "Mrs", "first_name": "Paulina", "last_name": "Koch"}
+            {"first_name": "Paulina", "last_name": "Koch"}
         )
 
     def test_edit_details_non_admin(self):
@@ -500,21 +449,21 @@ class TestTeacher(BaseTest):
             HomePage(self.selenium)
             .go_to_teacher_login_page()
             .login(email_2, password_2)
+            .open_account_tab()
         )
 
         page = page.change_teacher_details(
             {
-                "title": "Mr",
                 "first_name": "Florian",
                 "last_name": "Aucomte",
-                "current_password": "Password2",
+                "current_password": "Password2!",
             }
         )
         assert self.is_dashboard_page(page)
         assert is_teacher_details_updated_message_showing(self.selenium)
 
         assert page.check_account_details(
-            {"title": "Mr", "first_name": "Florian", "last_name": "Aucomte"}
+            {"first_name": "Florian", "last_name": "Aucomte"}
         )
 
     def test_change_email(self):
@@ -526,7 +475,12 @@ class TestTeacher(BaseTest):
         other_email, _ = signup_teacher_directly()
 
         self.selenium.get(self.live_server_url)
-        page = HomePage(self.selenium).go_to_teacher_login_page().login(email, password)
+        page = (
+            HomePage(self.selenium)
+            .go_to_teacher_login_page()
+            .login(email, password)
+            .open_account_tab()
+        )
 
         # Try changing email to an existing email, should fail
         page = page.change_email("Test", "Teacher", other_email, password)
@@ -538,7 +492,12 @@ class TestTeacher(BaseTest):
         mail.outbox = []
 
         self.selenium.get(self.live_server_url)
-        page = HomePage(self.selenium).go_to_teacher_login_page().login(email, password)
+        page = (
+            HomePage(self.selenium)
+            .go_to_teacher_login_page()
+            .login(email, password)
+            .open_account_tab()
+        )
 
         # Try changing email to a new one, should succeed
         new_email = "another-email@codeforlife.com"
@@ -556,10 +515,10 @@ class TestTeacher(BaseTest):
         page = email_utils.follow_change_email_link_to_dashboard(page, mail.outbox[0])
         mail.outbox = []
 
-        page = page.login(new_email, password)
+        page = page.login(new_email, password).open_account_tab()
 
         assert page.check_account_details(
-            {"title": "Mr", "first_name": "Test", "last_name": "Teacher"}
+            {"first_name": "Test", "last_name": "Teacher"}
         )
 
     def test_change_password(self):
@@ -569,9 +528,14 @@ class TestTeacher(BaseTest):
         create_school_student_directly(access_code)
 
         self.selenium.get(self.live_server_url)
-        page = HomePage(self.selenium).go_to_teacher_login_page().login(email, password)
+        page = (
+            HomePage(self.selenium)
+            .go_to_teacher_login_page()
+            .login(email, password)
+            .open_account_tab()
+        )
 
-        new_password = "AnotherPassword12"
+        new_password = "AnotherPassword12!"
         page = page.change_password("Test", "Teacher", new_password, password)
         assert self.is_login_page(page)
         assert is_password_updated_message_showing(self.selenium)
@@ -594,7 +558,7 @@ class TestTeacher(BaseTest):
 
         page = email_utils.follow_reset_email_link(self.selenium, mail.outbox[0])
 
-        new_password = "AnotherPassword12"
+        new_password = "AnotherPassword12!"
 
         page.teacher_reset_password(new_password)
 
@@ -615,6 +579,25 @@ class TestTeacher(BaseTest):
 
         assert len(mail.outbox) == 0
 
+    def test_onboarding_complete(self):
+        email, password = signup_teacher_directly()
+        create_organisation_directly(email)
+        create_class_directly(email)
+
+        student_name = "Test Student"
+
+        self.selenium.get(self.live_server_url)
+        page = (
+            HomePage(self.selenium)
+            .go_to_teacher_login_page()
+            .login_no_students(email, password)
+            .type_student_name(student_name)
+            .create_students()
+            .complete_setup()
+        )
+
+        assert page.has_onboarding_complete_popup()
+
     def get_to_forgotten_password_page(self):
         self.selenium.get(self.live_server_url)
         page = (
@@ -630,14 +613,8 @@ class TestTeacher(BaseTest):
     def is_dashboard_page(self, page):
         return page.__class__.__name__ == "TeachDashboardPage"
 
-    def is_materials_page(self, page):
-        return page.__class__.__name__ == "MaterialsPage"
-
-    def is_kurono_packs_page(self, page):
-        return page.__class__.__name__ == "KuronoPacksPage"
-
-    def is_pdf_viewer_page(self, page):
-        return page.__class__.__name__ == "PDFViewerPage"
+    def is_resources_page(self, page):
+        return page.__class__.__name__ == "ResourcesPage"
 
     def is_onboarding_page(self, page):
         return page.__class__.__name__ == "OnboardingOrganisationPage"

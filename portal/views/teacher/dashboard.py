@@ -1,39 +1,3 @@
-# -*- coding: utf-8 -*-
-# Code for Life
-#
-# Copyright (C) 2021, Ocado Innovation Limited
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ADDITIONAL TERMS – Section 7 GNU General Public Licence
-#
-# This licence does not grant any right, title or interest in any “Ocado” logos,
-# trade names or the trademark “Ocado” or any other trademarks or domain names
-# owned by Ocado Innovation Limited or the Ocado group of companies or any other
-# distinctive brand features of “Ocado” as may be secured from time to time. You
-# must not distribute any modification of this program using the trademark
-# “Ocado” or claim any affiliation or association with Ocado or its employees.
-#
-# You are not authorised to use the name Ocado (or any of its trade names) or
-# the names of any author or contributor in advertising or for publicity purposes
-# pertaining to the distribution of this program, without the prior written
-# authorisation of Ocado.
-#
-# Any propagation, distribution or conveyance of this program must include this
-# copyright notice and these terms. You must not misrepresent the origins of this
-# program; modified versions of the program must be marked as such and not
-# identified as the original program.
 from common import email_messages
 from common.helpers.emails import NOTIFICATION_EMAIL, send_email, update_email
 from common.helpers.generators import generate_access_code, get_random_username
@@ -63,6 +27,8 @@ from portal.helpers.ratelimit import (
     clear_ratelimit_cache_for_user,
 )
 from two_factor.utils import devices_for_user
+
+from .teach import create_class
 
 
 def _get_update_account_rate(group, request):
@@ -115,13 +81,14 @@ def dashboard_teacher_view(request, is_admin):
     create_class_form = ClassCreationForm()
 
     update_account_form = TeacherEditAccountForm(request.user)
-    update_account_form.fields["title"].initial = teacher.title
     update_account_form.fields["first_name"].initial = request.user.first_name
     update_account_form.fields["last_name"].initial = request.user.last_name
 
     anchor = ""
 
     backup_tokens = check_backup_tokens(request)
+
+    show_onboarding_complete = False
 
     if request.method == "POST":
         if can_process_update_school_form(request, is_admin):
@@ -135,7 +102,7 @@ def dashboard_teacher_view(request, is_admin):
             anchor = "new-class"
             create_class_form = ClassCreationForm(request.POST)
             if create_class_form.is_valid():
-                created_class = create_class_new(create_class_form, teacher)
+                created_class = create_class(create_class_form, teacher)
                 messages.success(
                     request,
                     "The class '{className}' has been created successfully.".format(
@@ -147,6 +114,9 @@ def dashboard_teacher_view(request, is_admin):
                         "view_class", kwargs={"access_code": created_class.access_code}
                     )
                 )
+
+        elif request.POST.get("show_onboarding_complete") == "1":
+            show_onboarding_complete = True
 
         else:
             anchor = "account"
@@ -195,6 +165,7 @@ def dashboard_teacher_view(request, is_admin):
             "update_account_form": update_account_form,
             "anchor": anchor,
             "backup_tokens": backup_tokens,
+            "show_onboarding_complete": show_onboarding_complete,
         },
     )
 
@@ -247,19 +218,6 @@ def process_update_school_form(request, school, old_anchor):
     return anchor
 
 
-def create_class_new(form, teacher):
-    classmate_progress = False
-    if form.cleaned_data["classmate_progress"] == "True":
-        classmate_progress = True
-    klass = Class.objects.create(
-        name=form.cleaned_data["class_name"],
-        teacher=teacher,
-        access_code=generate_access_code(),
-        classmates_data_viewable=classmate_progress,
-    )
-    return klass
-
-
 def process_update_account_form(request, teacher, old_anchor):
     update_account_form = TeacherEditAccountForm(request.user, request.POST)
     changing_email = False
@@ -273,7 +231,6 @@ def process_update_account_form(request, teacher, old_anchor):
             update_account_form, teacher.new_user, request, data
         )
 
-        teacher.title = data["title"]
         teacher.new_user.first_name = data["first_name"]
         teacher.new_user.last_name = data["last_name"]
 
